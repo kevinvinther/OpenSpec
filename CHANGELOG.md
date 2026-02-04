@@ -12,7 +12,7 @@
   - Structure validation with configurable depth limits and naming conventions
   - 1:1 delta replication (change deltas mirror main spec structure)
   - Cross-platform path handling (Windows, macOS, Linux)
-  - Configuration via `specStructure` in global config
+  - Configuration via `specStructure` in global and project config
 
   **Updated commands:**
   - `list`, `validate`, `sync`, `archive` - all support hierarchical paths
