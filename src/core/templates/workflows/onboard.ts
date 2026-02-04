@@ -233,7 +233,7 @@ Here's a draft proposal:
 ## Capabilities
 
 ### New Capabilities
-- \`<capability-name>\`: [brief description]
+- \`<capability-path>\`: [brief description]
 
 ### Modified Capabilities
 <!-- If modifying existing behavior -->
