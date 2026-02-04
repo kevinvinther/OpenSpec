@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import { z } from 'zod';
 import type { SpecStructureConfig } from '../utils/spec-discovery.js';
 
 // Constants
@@ -132,6 +133,28 @@ export function getGlobalConfig(): GlobalConfig {
     const content = fs.readFileSync(configPath, 'utf-8');
     const parsed = JSON.parse(content);
 
+    // Validate specStructure sub-fields individually (resilient parsing)
+    const validatedSpecStructure: SpecStructureConfig = { ...DEFAULT_CONFIG.specStructure };
+    if (parsed.specStructure && typeof parsed.specStructure === 'object' && !Array.isArray(parsed.specStructure)) {
+      const raw = parsed.specStructure;
+      if (raw.structure !== undefined) {
+        const result = z.enum(['flat', 'hierarchical', 'auto']).safeParse(raw.structure);
+        if (result.success) validatedSpecStructure.structure = result.data;
+      }
+      if (raw.maxDepth !== undefined) {
+        const result = z.number().int().min(1).max(10).safeParse(raw.maxDepth);
+        if (result.success) validatedSpecStructure.maxDepth = result.data;
+      }
+      if (raw.allowMixed !== undefined) {
+        const result = z.boolean().safeParse(raw.allowMixed);
+        if (result.success) validatedSpecStructure.allowMixed = result.data;
+      }
+      if (raw.validatePaths !== undefined) {
+        const result = z.boolean().safeParse(raw.validatePaths);
+        if (result.success) validatedSpecStructure.validatePaths = result.data;
+      }
+    }
+
     // Merge with defaults (loaded values take precedence)
     const merged: GlobalConfig = {
       ...DEFAULT_CONFIG,
@@ -141,11 +164,7 @@ export function getGlobalConfig(): GlobalConfig {
         ...DEFAULT_CONFIG.featureFlags,
         ...(parsed.featureFlags || {})
       },
-      // Deep merge specStructure
-      specStructure: {
-        ...DEFAULT_CONFIG.specStructure,
-        ...(parsed.specStructure || {})
-      }
+      specStructure: validatedSpecStructure
     };
 
     // Schema evolution: apply defaults for new fields if not present in loaded config
