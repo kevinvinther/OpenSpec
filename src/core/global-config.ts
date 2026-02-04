@@ -140,6 +140,11 @@ export function getGlobalConfig(): GlobalConfig {
       featureFlags: {
         ...DEFAULT_CONFIG.featureFlags,
         ...(parsed.featureFlags || {})
+      },
+      // Deep merge specStructure
+      specStructure: {
+        ...DEFAULT_CONFIG.specStructure,
+        ...(parsed.specStructure || {})
       }
     };
 
