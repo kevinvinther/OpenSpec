@@ -159,3 +159,7 @@ opencode.json
 
 # Bob
 .bob/
+
+# GitHub generated files (openspec update)
+.github/prompts/
+.github/skills/
