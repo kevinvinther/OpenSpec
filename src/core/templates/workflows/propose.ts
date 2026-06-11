@@ -9,107 +9,203 @@ import type { SkillTemplate, CommandTemplate } from '../types.js';
 export function getOpsxProposeSkillTemplate(): SkillTemplate {
   return {
     name: 'openspec-propose',
-    description: 'Propose a new change with all artifacts generated in one step. Use when the user wants to quickly describe what they want to build and get a complete proposal with design, specs, and tasks ready for implementation.',
-    instructions: `Propose a new change - create the change and generate all artifacts in one step.
+    description: 'Propose a new change. Interviews the developer and investigates the codebase before writing any artifacts. Use when a developer wants to turn a rough idea or ticket into a fully specified change with proposal, design, and tasks.',
+    instructions: `Propose a new change. Before writing any artifact, interview the developer and investigate the codebase until you have enough context to write something worth reading.
 
-I'll create a change with artifacts:
-- proposal.md (what & why)
-- design.md (how)
-- tasks.md (implementation steps)
-
-When ready to implement, run /opsx:apply
+The output is a change directory with all artifacts ready for implementation. The path to get there runs through a focused interview, a codebase investigation, and a scan for relevant prior art — in that order.
 
 ---
 
-**Input**: The user's request should include a change name (kebab-case) OR a description of what they want to build.
+## Phase 1: Interview
 
-**Steps**
+**Goal:** Reach ~80% confidence about what the developer actually wants, expressed in their own words.
 
-1. **If no clear input provided, ask what they want to build**
+### Step 1.1 — Get the initial input
 
-   Use the **AskUserQuestion tool** (open-ended, no preset options) to ask:
-   > "What change do you want to work on? Describe what you want to build or fix."
+If the developer has provided a description, use it. If not, ask one open question:
 
-   From their description, derive a kebab-case name (e.g., "add user authentication" → \`add-user-auth\`).
+> "What do you want to build or change? Give me as much or as little as you have."
 
-   **IMPORTANT**: Do NOT proceed without understanding what the user wants to build.
+There is no minimum bar for the initial input. A one-liner is fine — the interview fills the gap.
 
-2. **Create the change directory**
+### Step 1.2 — State a hypothesis
+
+Before asking anything, write your current best read of what the developer wants:
+
+\`\`\`
+HYPOTHESIS: <one sentence — what you think they actually want, not just what they said>
+CONFIDENCE: ~<N>% — missing: <what's still unresolved>
+\`\`\`
+
+Be honest about the number. If you can't predict their reaction to the next three questions you'd ask, the number is wrong. Always include a reason when confidence is below ~80%.
+
+### Step 1.3 — Ask one question at a time, each with a guess
+
+Format every question as:
+
+\`\`\`
+Q: <one focused question>
+GUESS: <your hypothesis for the answer, and the reasoning behind it>
+\`\`\`
+
+Wait for the answer before asking the next question. Do not batch questions.
+
+**What to probe for** (not necessarily in this order — follow the conversation):
+- **Who** uses or is affected by this change
+- **Why now** — what changed or what is currently painful
+- **Success** — how they'd know it worked, with a number or observable outcome if possible
+- **Constraint** — the binding limit (time, scope, backwards compatibility, performance target)
+- **Out of scope** — what explicitly is not part of this change
+
+When the developer gives convention-signaling answers ("scalable", "clean", "the usual way"), ask:
+> "If you didn't have to justify this to anyone, what would you actually want?"
+
+### Step 1.4 — Confirm intent
+
+When confidence reaches ~80%, write back a tight restate:
+
+\`\`\`
+Here's what I now understand:
+
+- Outcome:      <one line>
+- Who:          <one line — who benefits or is affected>
+- Why now:      <one line — what changed or what's painful>
+- Success:      <one line — how we know it worked>
+- Constraint:   <one line — the binding limit>
+- Out of scope: <one line — what we're explicitly not doing>
+
+Anything wrong or missing?
+\`\`\`
+
+The "Out of scope" line is not optional. Silent disagreement about non-goals is half of all misalignment.
+
+The gate is an explicit confirmation. The following are **not** confirmation:
+- "Whatever you think is best" → ask with two concrete options as a choice
+- "Sounds good" → ask "Anything you'd refine?"
+- Silence followed by "let's go" → ask "Did I miss anything?"
+
+Fold corrections in and restate until you get an explicit yes.
+
+---
+
+## Phase 2: Codebase Investigation
+
+**Goal:** Understand the existing system well enough that the artifacts reflect reality, not assumptions.
+
+Run this phase after intent is confirmed, before writing any artifact. Do not skip it even if the developer's description was detailed.
+
+### Step 2.1 — Locate relevant code
+
+Based on the confirmed intent, identify and read the parts of the codebase most relevant to this change:
+
+- Entry points, interfaces, or public APIs that will be touched
+- Existing implementations of similar patterns
+- Data models, schemas, or types involved
+- Tests that cover the area being changed
+- Configuration or environment files that affect this area
+
+Use search tools to find files by keyword or path pattern. Read the files, don't just list them.
+
+### Step 2.2 — Scan for relevant archived changes
+
+\`\`\`bash
+ls openspec/changes/archive/
+\`\`\`
+
+Read the \`proposal.md\` of any archived change whose name or scope overlaps with the confirmed intent. "Overlaps" means: touches the same subsystem, solves a related problem, or was explicitly mentioned by the developer.
+
+If relevant archived changes exist, summarise what they did and note them as prior art. They become input to the artifacts — not to copy, but to avoid reinventing or contradicting.
+
+If no archived changes are relevant, move on silently.
+
+### Step 2.3 — Surface what you found
+
+Before creating any artifact, tell the developer what you found in a brief summary:
+
+\`\`\`
+**Codebase context:**
+- <key file or pattern you found and why it matters>
+- <another finding>
+
+**Prior art:** <archived change names, or "None relevant">
+
+Does any of this change what you want?
+\`\`\`
+
+If something you found contradicts or complicates the confirmed intent, surface it here and re-confirm before proceeding.
+
+---
+
+## Phase 3: Artifact Creation
+
+Once intent is confirmed and the codebase investigation is complete, create the change and its artifacts.
+
+### Step 3.1 — Derive a name and create the change
+
+From the confirmed intent, derive a kebab-case name (e.g., "add retry logic to payment processor" → \`add-payment-retry-logic\`).
+
+\`\`\`bash
+openspec new change "<name>"
+\`\`\`
+
+### Step 3.2 — Get the artifact build order
+
+\`\`\`bash
+openspec status --change "<name>" --json
+\`\`\`
+
+Parse the JSON to get:
+- \`applyRequires\`: artifact IDs needed before implementation
+- \`artifacts\`: all artifacts with status and dependencies
+- \`planningHome\`, \`changeRoot\`, \`artifactPaths\`, \`actionContext\`: path context — use these, do not assume repo-local paths
+
+### Step 3.3 — Create artifacts in dependency order
+
+Use the **TodoWrite tool** to track progress.
+
+For each artifact that is \`ready\` (dependencies satisfied):
+
+1. Get instructions:
    \`\`\`bash
-   openspec new change "<name>"
+   openspec instructions <artifact-id> --change "<name>" --json
    \`\`\`
-   This creates a scaffolded change in the planning home resolved by the CLI with \`.openspec.yaml\`.
+   The JSON includes \`context\`, \`rules\`, \`template\`, \`instruction\`, \`resolvedOutputPath\`, \`dependencies\`.
 
-3. **Get the artifact build order**
-   \`\`\`bash
-   openspec status --change "<name>" --json
-   \`\`\`
-   Parse the JSON to get:
-   - \`applyRequires\`: array of artifact IDs needed before implementation (e.g., \`["tasks"]\`)
-   - \`artifacts\`: list of all artifacts with their status and dependencies
-   - \`planningHome\`, \`changeRoot\`, \`artifactPaths\`, and \`actionContext\`: path and scope context. Use these instead of assuming repo-local paths.
+2. Read any completed dependency artifacts for context.
 
-4. **Create artifacts in sequence until apply-ready**
+3. Write the artifact to \`resolvedOutputPath\`, using \`template\` as structure. Incorporate:
+   - The confirmed intent from Phase 1
+   - The codebase findings from Phase 2
+   - Any relevant prior art from archived changes
+   - \`context\` and \`rules\` as constraints for you — **never copy them into the file**
 
-   Use the **TodoWrite tool** to track progress through the artifacts.
+4. Show progress: "Created \`<artifact-id>\`"
 
-   Loop through artifacts in dependency order (artifacts with no pending dependencies first):
+Re-run \`openspec status --change "<name>" --json\` after each artifact. Stop when all \`applyRequires\` artifacts have \`status: "done"\`.
 
-   a. **For each artifact that is \`ready\` (dependencies satisfied)**:
-      - Get instructions:
-        \`\`\`bash
-        openspec instructions <artifact-id> --change "<name>" --json
-        \`\`\`
-      - The instructions JSON includes:
-        - \`context\`: Project background (constraints for you - do NOT include in output)
-        - \`rules\`: Artifact-specific rules (constraints for you - do NOT include in output)
-        - \`template\`: The structure to use for your output file
-        - \`instruction\`: Schema-specific guidance for this artifact type
-        - \`resolvedOutputPath\`: Resolved path or pattern to write the artifact
-        - \`dependencies\`: Completed artifacts to read for context
-      - Read any completed dependency files for context
-      - Create the artifact file using \`template\` as the structure and write it to \`resolvedOutputPath\`
-      - Apply \`context\` and \`rules\` as constraints - but do NOT copy them into the file
-      - Show brief progress: "Created <artifact-id>"
+### Step 3.4 — Show final status
 
-   b. **Continue until all \`applyRequires\` artifacts are complete**
-      - After creating each artifact, re-run \`openspec status --change "<name>" --json\`
-      - Check if every artifact ID in \`applyRequires\` has \`status: "done"\` in the artifacts array
-      - Stop when all \`applyRequires\` artifacts are done
+\`\`\`bash
+openspec status --change "<name>"
+\`\`\`
 
-   c. **If an artifact requires user input** (unclear context):
-      - Use **AskUserQuestion tool** to clarify
-      - Then continue with creation
-
-5. **Show final status**
-   \`\`\`bash
-   openspec status --change "<name>"
-   \`\`\`
-
-**Output**
-
-After completing all artifacts, summarize:
+Summarise:
 - Change name and location
-- List of artifacts created with brief descriptions
-- What's ready: "All artifacts created! Ready for implementation."
-- Prompt: "Run \`/opsx:apply\` or ask me to implement to start working on the tasks."
+- Artifacts created with one-line descriptions
+- "Ready for implementation. Run \`/opsx:apply\` when you're ready."
 
-**Artifact Creation Guidelines**
+---
 
-- Follow the \`instruction\` field from \`openspec instructions\` for each artifact type
-- The schema defines what each artifact should contain - follow it
-- Read dependency artifacts for context before creating new ones
-- Use \`template\` as the structure for your output file - fill in its sections
-- **IMPORTANT**: \`context\` and \`rules\` are constraints for YOU, not content for the file
-  - Do NOT copy \`<context>\`, \`<rules>\`, \`<project_context>\` blocks into the artifact
-  - These guide what you write, but should never appear in the output
+## Guardrails
 
-**Guardrails**
-- Create ALL artifacts needed for implementation (as defined by schema's \`apply.requires\`)
-- Always read dependency artifacts before creating a new one
-- If context is critically unclear, ask the user - but prefer making reasonable decisions to keep momentum
-- If a change with that name already exists, ask if user wants to continue it or create a new one
-- Verify each artifact file exists after writing before proceeding to next`,
+- **Never skip the interview.** Even a fully-specified input contains assumptions. Run at least one hypothesis + confirmation cycle.
+- **Never skip the codebase investigation.** Reading code before writing specs is what makes the artifacts accurate.
+- **No fast path.** Do not proceed to artifact creation until you have an explicit confirmation of intent.
+- **One question at a time.** Never batch questions.
+- **Every question needs a guess.** A question without your hypothesis attached is a survey, not an interview.
+- **Three or more rounds without confidence rising** means you're asking the wrong questions — step back and reframe.
+- If a change with that name already exists, ask if the developer wants to continue it or create a new one.
+- Verify each artifact file exists after writing before proceeding to the next.`,
     license: 'MIT',
     compatibility: 'Requires openspec CLI.',
     metadata: { author: 'openspec', version: '1.0' },
@@ -119,108 +215,204 @@ After completing all artifacts, summarize:
 export function getOpsxProposeCommandTemplate(): CommandTemplate {
   return {
     name: 'OPSX: Propose',
-    description: 'Propose a new change - create it and generate all artifacts in one step',
+    description: 'Propose a new change — interview the developer and investigate the codebase before writing any artifacts',
     category: 'Workflow',
     tags: ['workflow', 'artifacts', 'experimental'],
-    content: `Propose a new change - create the change and generate all artifacts in one step.
+    content: `Propose a new change. Before writing any artifact, interview the developer and investigate the codebase until you have enough context to write something worth reading.
 
-I'll create a change with artifacts:
-- proposal.md (what & why)
-- design.md (how)
-- tasks.md (implementation steps)
-
-When ready to implement, run /opsx:apply
+The output is a change directory with all artifacts ready for implementation. The path to get there runs through a focused interview, a codebase investigation, and a scan for relevant prior art — in that order.
 
 ---
 
-**Input**: The argument after \`/opsx:propose\` is the change name (kebab-case), OR a description of what the user wants to build.
+## Phase 1: Interview
 
-**Steps**
+**Goal:** Reach ~80% confidence about what the developer actually wants, expressed in their own words.
 
-1. **If no input provided, ask what they want to build**
+### Step 1.1 — Get the initial input
 
-   Use the **AskUserQuestion tool** (open-ended, no preset options) to ask:
-   > "What change do you want to work on? Describe what you want to build or fix."
+If the developer has provided a description (as an argument to /opsx:propose), use it. If not, ask one open question:
 
-   From their description, derive a kebab-case name (e.g., "add user authentication" → \`add-user-auth\`).
+> "What do you want to build or change? Give me as much or as little as you have."
 
-   **IMPORTANT**: Do NOT proceed without understanding what the user wants to build.
+There is no minimum bar for the initial input. A one-liner is fine — the interview fills the gap.
 
-2. **Create the change directory**
+### Step 1.2 — State a hypothesis
+
+Before asking anything, write your current best read of what the developer wants:
+
+\`\`\`
+HYPOTHESIS: <one sentence — what you think they actually want, not just what they said>
+CONFIDENCE: ~<N>% — missing: <what's still unresolved>
+\`\`\`
+
+Be honest about the number. If you can't predict their reaction to the next three questions you'd ask, the number is wrong. Always include a reason when confidence is below ~80%.
+
+### Step 1.3 — Ask one question at a time, each with a guess
+
+Format every question as:
+
+\`\`\`
+Q: <one focused question>
+GUESS: <your hypothesis for the answer, and the reasoning behind it>
+\`\`\`
+
+Wait for the answer before asking the next question. Do not batch questions.
+
+**What to probe for** (not necessarily in this order — follow the conversation):
+- **Who** uses or is affected by this change
+- **Why now** — what changed or what is currently painful
+- **Success** — how they'd know it worked, with a number or observable outcome if possible
+- **Constraint** — the binding limit (time, scope, backwards compatibility, performance target)
+- **Out of scope** — what explicitly is not part of this change
+
+When the developer gives convention-signaling answers ("scalable", "clean", "the usual way"), ask:
+> "If you didn't have to justify this to anyone, what would you actually want?"
+
+### Step 1.4 — Confirm intent
+
+When confidence reaches ~80%, write back a tight restate:
+
+\`\`\`
+Here's what I now understand:
+
+- Outcome:      <one line>
+- Who:          <one line — who benefits or is affected>
+- Why now:      <one line — what changed or what's painful>
+- Success:      <one line — how we know it worked>
+- Constraint:   <one line — the binding limit>
+- Out of scope: <one line — what we're explicitly not doing>
+
+Anything wrong or missing?
+\`\`\`
+
+The "Out of scope" line is not optional. Silent disagreement about non-goals is half of all misalignment.
+
+The gate is an explicit confirmation. The following are **not** confirmation:
+- "Whatever you think is best" → ask with two concrete options as a choice
+- "Sounds good" → ask "Anything you'd refine?"
+- Silence followed by "let's go" → ask "Did I miss anything?"
+
+Fold corrections in and restate until you get an explicit yes.
+
+---
+
+## Phase 2: Codebase Investigation
+
+**Goal:** Understand the existing system well enough that the artifacts reflect reality, not assumptions.
+
+Run this phase after intent is confirmed, before writing any artifact. Do not skip it even if the developer's description was detailed.
+
+### Step 2.1 — Locate relevant code
+
+Based on the confirmed intent, identify and read the parts of the codebase most relevant to this change:
+
+- Entry points, interfaces, or public APIs that will be touched
+- Existing implementations of similar patterns
+- Data models, schemas, or types involved
+- Tests that cover the area being changed
+- Configuration or environment files that affect this area
+
+Use search tools to find files by keyword or path pattern. Read the files, don't just list them.
+
+### Step 2.2 — Scan for relevant archived changes
+
+\`\`\`bash
+ls openspec/changes/archive/
+\`\`\`
+
+Read the \`proposal.md\` of any archived change whose name or scope overlaps with the confirmed intent. "Overlaps" means: touches the same subsystem, solves a related problem, or was explicitly mentioned by the developer.
+
+If relevant archived changes exist, summarise what they did and note them as prior art. They become input to the artifacts — not to copy, but to avoid reinventing or contradicting.
+
+If no archived changes are relevant, move on silently.
+
+### Step 2.3 — Surface what you found
+
+Before creating any artifact, tell the developer what you found in a brief summary:
+
+\`\`\`
+**Codebase context:**
+- <key file or pattern you found and why it matters>
+- <another finding>
+
+**Prior art:** <archived change names, or "None relevant">
+
+Does any of this change what you want?
+\`\`\`
+
+If something you found contradicts or complicates the confirmed intent, surface it here and re-confirm before proceeding.
+
+---
+
+## Phase 3: Artifact Creation
+
+Once intent is confirmed and the codebase investigation is complete, create the change and its artifacts.
+
+### Step 3.1 — Derive a name and create the change
+
+From the confirmed intent, derive a kebab-case name (e.g., "add retry logic to payment processor" → \`add-payment-retry-logic\`).
+
+\`\`\`bash
+openspec new change "<name>"
+\`\`\`
+
+### Step 3.2 — Get the artifact build order
+
+\`\`\`bash
+openspec status --change "<name>" --json
+\`\`\`
+
+Parse the JSON to get:
+- \`applyRequires\`: artifact IDs needed before implementation
+- \`artifacts\`: all artifacts with status and dependencies
+- \`planningHome\`, \`changeRoot\`, \`artifactPaths\`, \`actionContext\`: path context — use these, do not assume repo-local paths
+
+### Step 3.3 — Create artifacts in dependency order
+
+Use the **TodoWrite tool** to track progress.
+
+For each artifact that is \`ready\` (dependencies satisfied):
+
+1. Get instructions:
    \`\`\`bash
-   openspec new change "<name>"
+   openspec instructions <artifact-id> --change "<name>" --json
    \`\`\`
-   This creates a scaffolded change in the planning home resolved by the CLI with \`.openspec.yaml\`.
+   The JSON includes \`context\`, \`rules\`, \`template\`, \`instruction\`, \`resolvedOutputPath\`, \`dependencies\`.
 
-3. **Get the artifact build order**
-   \`\`\`bash
-   openspec status --change "<name>" --json
-   \`\`\`
-   Parse the JSON to get:
-   - \`applyRequires\`: array of artifact IDs needed before implementation (e.g., \`["tasks"]\`)
-   - \`artifacts\`: list of all artifacts with their status and dependencies
-   - \`planningHome\`, \`changeRoot\`, \`artifactPaths\`, and \`actionContext\`: path and scope context. Use these instead of assuming repo-local paths.
+2. Read any completed dependency artifacts for context.
 
-4. **Create artifacts in sequence until apply-ready**
+3. Write the artifact to \`resolvedOutputPath\`, using \`template\` as structure. Incorporate:
+   - The confirmed intent from Phase 1
+   - The codebase findings from Phase 2
+   - Any relevant prior art from archived changes
+   - \`context\` and \`rules\` as constraints for you — **never copy them into the file**
 
-   Use the **TodoWrite tool** to track progress through the artifacts.
+4. Show progress: "Created \`<artifact-id>\`"
 
-   Loop through artifacts in dependency order (artifacts with no pending dependencies first):
+Re-run \`openspec status --change "<name>" --json\` after each artifact. Stop when all \`applyRequires\` artifacts have \`status: "done"\`.
 
-   a. **For each artifact that is \`ready\` (dependencies satisfied)**:
-      - Get instructions:
-        \`\`\`bash
-        openspec instructions <artifact-id> --change "<name>" --json
-        \`\`\`
-      - The instructions JSON includes:
-        - \`context\`: Project background (constraints for you - do NOT include in output)
-        - \`rules\`: Artifact-specific rules (constraints for you - do NOT include in output)
-        - \`template\`: The structure to use for your output file
-        - \`instruction\`: Schema-specific guidance for this artifact type
-        - \`resolvedOutputPath\`: Resolved path or pattern to write the artifact
-        - \`dependencies\`: Completed artifacts to read for context
-      - Read any completed dependency files for context
-      - Create the artifact file using \`template\` as the structure and write it to \`resolvedOutputPath\`
-      - Apply \`context\` and \`rules\` as constraints - but do NOT copy them into the file
-      - Show brief progress: "Created <artifact-id>"
+### Step 3.4 — Show final status
 
-   b. **Continue until all \`applyRequires\` artifacts are complete**
-      - After creating each artifact, re-run \`openspec status --change "<name>" --json\`
-      - Check if every artifact ID in \`applyRequires\` has \`status: "done"\` in the artifacts array
-      - Stop when all \`applyRequires\` artifacts are done
+\`\`\`bash
+openspec status --change "<name>"
+\`\`\`
 
-   c. **If an artifact requires user input** (unclear context):
-      - Use **AskUserQuestion tool** to clarify
-      - Then continue with creation
-
-5. **Show final status**
-   \`\`\`bash
-   openspec status --change "<name>"
-   \`\`\`
-
-**Output**
-
-After completing all artifacts, summarize:
+Summarise:
 - Change name and location
-- List of artifacts created with brief descriptions
-- What's ready: "All artifacts created! Ready for implementation."
-- Prompt: "Run \`/opsx:apply\` to start implementing."
+- Artifacts created with one-line descriptions
+- "Ready for implementation. Run \`/opsx:apply\` when you're ready."
 
-**Artifact Creation Guidelines**
+---
 
-- Follow the \`instruction\` field from \`openspec instructions\` for each artifact type
-- The schema defines what each artifact should contain - follow it
-- Read dependency artifacts for context before creating new ones
-- Use \`template\` as the structure for your output file - fill in its sections
-- **IMPORTANT**: \`context\` and \`rules\` are constraints for YOU, not content for the file
-  - Do NOT copy \`<context>\`, \`<rules>\`, \`<project_context>\` blocks into the artifact
-  - These guide what you write, but should never appear in the output
+## Guardrails
 
-**Guardrails**
-- Create ALL artifacts needed for implementation (as defined by schema's \`apply.requires\`)
-- Always read dependency artifacts before creating a new one
-- If context is critically unclear, ask the user - but prefer making reasonable decisions to keep momentum
-- If a change with that name already exists, ask if user wants to continue it or create a new one
-- Verify each artifact file exists after writing before proceeding to next`
+- **Never skip the interview.** Even a fully-specified input contains assumptions. Run at least one hypothesis + confirmation cycle.
+- **Never skip the codebase investigation.** Reading code before writing specs is what makes the artifacts accurate.
+- **No fast path.** Do not proceed to artifact creation until you have an explicit confirmation of intent.
+- **One question at a time.** Never batch questions.
+- **Every question needs a guess.** A question without your hypothesis attached is a survey, not an interview.
+- **Three or more rounds without confidence rising** means you're asking the wrong questions — step back and reframe.
+- If a change with that name already exists, ask if the developer wants to continue it or create a new one.
+- Verify each artifact file exists after writing before proceeding to the next.`
   };
 }
