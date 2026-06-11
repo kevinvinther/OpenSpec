@@ -6,149 +6,130 @@
  */
 import type { SkillTemplate, CommandTemplate } from '../types.js';
 
-export function getOpsxProposeSkillTemplate(): SkillTemplate {
-  return {
-    name: 'openspec-propose',
-    description: 'Propose a new change. Interviews the developer and investigates the codebase before writing any artifacts. Use when a developer wants to turn a rough idea or ticket into a fully specified change with proposal, design, and tasks.',
-    instructions: `Propose a new change. Before writing any artifact, interview the developer and investigate the codebase until you have enough context to write something worth reading.
+const INSTRUCTIONS = `Propose a new change. Interview the developer and investigate the codebase until every question raised by the ask has been answered. Only then write the artifacts.
 
-The output is a change directory with all artifacts ready for implementation. The path to get there runs through a focused interview, a codebase investigation, and a scan for relevant prior art — in that order.
+The stop condition is not a confidence level. It is: **the open-questions set is empty** — no question remains without an answer, and the last answer generated no new questions.
 
 ---
 
-## Phase 1: Interview
+## Phase 1: Orient
 
-**Goal:** Reach ~80% confidence about what the developer actually wants, expressed in their own words.
-
-### Step 1.1 — Get the initial input
+### 1.1 — Get the initial ask
 
 If the developer has provided a description, use it. If not, ask one open question:
 
 > "What do you want to build or change? Give me as much or as little as you have."
 
-There is no minimum bar for the initial input. A one-liner is fine — the interview fills the gap.
+A one-liner is fine. The interview does the work.
 
-### Step 1.2 — State a hypothesis
+### 1.2 — Read the codebase before asking anything
 
-Before asking anything, write your current best read of what the developer wants:
+Based on the ask, find and read the parts of the system most likely affected. Use search tools — do not guess at file locations.
 
+Look for:
+- The models, schemas, or types involved
+- The services, controllers, or handlers that would change
+- Existing tests that cover this area
+- Configuration or environment that affects it
+- Any conventions visible in nearby code (naming, patterns, error handling)
+
+Then scan for relevant prior art:
+\`\`\`bash
+ls openspec/changes/archive/
 \`\`\`
-HYPOTHESIS: <one sentence — what you think they actually want, not just what they said>
-CONFIDENCE: ~<N>% — missing: <what's still unresolved>
-\`\`\`
+Read the \`proposal.md\` of any archived change that touches the same subsystem or solves a related problem.
 
-Be honest about the number. If you can't predict their reaction to the next three questions you'd ask, the number is wrong. Always include a reason when confidence is below ~80%.
+The goal of this reading is to understand the context well enough to ask *relevant* questions — not a generic checklist, but questions grounded in what this codebase actually looks like. Questions that code reading can already answer should not be asked.
 
-### Step 1.3 — Ask one question at a time, each with a guess
+### 1.3 — Build the initial open-questions set
 
-Format every question as:
+From the ask and everything you've read, identify every question that would need an answer before implementation could begin without ambiguity. This is your internal working state — do not show it to the developer as a list.
+
+The questions depend entirely on context. Domains to consider (include only those relevant to this codebase and this ask):
+
+- **Data**: schema changes, field types, nullability, defaults for existing records, indexes, migrations
+- **API / interface**: which endpoints or contracts change, request/response shape, versioning, breaking changes for consumers
+- **Business logic**: validation rules, side effects, triggers, calculations, state transitions
+- **Auth & permissions**: who can read or write this, role changes, visibility rules
+- **Integrations**: events, webhooks, queues, external consumers, data exports
+- **Frontend**: which views or components are affected, form behaviour, error states
+- **Performance**: query impact, caching, load characteristics
+- **Testing**: what existing tests break, what new tests are needed
+- **Deployment**: migration safety, rollout strategy, rollback, feature flags
+
+---
+
+## Phase 2: Interview
+
+Work through the open-questions set one question at a time until it is empty.
+
+### For each question:
+
+Ask it with your best guess attached:
 
 \`\`\`
 Q: <one focused question>
-GUESS: <your hypothesis for the answer, and the reasoning behind it>
+GUESS: <your hypothesis for the answer, and why you're guessing that>
 \`\`\`
 
-Wait for the answer before asking the next question. Do not batch questions.
+Wait for the answer before asking the next question. Never batch questions. The third question often depends on the first answer; asking them together locks in the wrong frame.
 
-**What to probe for** (not necessarily in this order — follow the conversation):
-- **Who** uses or is affected by this change
-- **Why now** — what changed or what is currently painful
-- **Success** — how they'd know it worked, with a number or observable outcome if possible
-- **Constraint** — the binding limit (time, scope, backwards compatibility, performance target)
-- **Out of scope** — what explicitly is not part of this change
+### After each answer:
 
-When the developer gives convention-signaling answers ("scalable", "clean", "the usual way"), ask:
-> "If you didn't have to justify this to anyone, what would you actually want?"
+1. **Mark the question resolved.**
+2. **Open new questions** if the answer introduces complexity you didn't anticipate. If it points to code you haven't read, go read it before continuing — that code may generate further questions or close existing ones.
+3. **Close branches** if the answer makes other questions irrelevant (e.g. "this is internal-only, no external API" closes all versioning and consumer-impact questions).
+4. **Ask the next open question.**
 
-### Step 1.4 — Confirm intent
+This branching is expected and correct. The question set will grow and shrink throughout the interview. A complex answer should make the set larger, not smaller — resist the urge to move on when something surfaces new unknowns.
 
-When confidence reaches ~80%, write back a tight restate:
+### Stop condition:
+
+Stop when the open-questions set is empty: every question has an answer, and the last answer generated no new questions. Do not stop before that point.
+
+---
+
+## Phase 3: Confirm
+
+When the set is empty, restate everything established in a structured summary. Use only the sections that are relevant to this change:
 
 \`\`\`
 Here's what I now understand:
 
-- Outcome:      <one line>
-- Who:          <one line — who benefits or is affected>
-- Why now:      <one line — what changed or what's painful>
-- Success:      <one line — how we know it worked>
-- Constraint:   <one line — the binding limit>
-- Out of scope: <one line — what we're explicitly not doing>
+What:        <what is changing, concretely>
+Why:         <the problem this solves and why it matters now>
+Who:         <who is affected — users, developers, downstream systems>
+Data:        <schema/model changes and migration approach>
+Interface:   <what changes for callers, if anything>
+Logic:       <validation rules, side effects, business rules>
+Permissions: <auth or visibility changes, if any>
+Out of scope: <what we are explicitly not doing>
 
 Anything wrong or missing?
 \`\`\`
 
-The "Out of scope" line is not optional. Silent disagreement about non-goals is half of all misalignment.
-
-The gate is an explicit confirmation. The following are **not** confirmation:
-- "Whatever you think is best" → ask with two concrete options as a choice
+The gate is an explicit yes. The following are **not** yes:
 - "Sounds good" → ask "Anything you'd refine?"
-- Silence followed by "let's go" → ask "Did I miss anything?"
+- "Whatever you think" → give two concrete options and ask them to pick
+- Silence → ask "Did I miss anything?"
 
 Fold corrections in and restate until you get an explicit yes.
 
 ---
 
-## Phase 2: Codebase Investigation
+## Phase 4: Artifact Creation
 
-**Goal:** Understand the existing system well enough that the artifacts reflect reality, not assumptions.
+Once confirmed, create the change and its artifacts.
 
-Run this phase after intent is confirmed, before writing any artifact. Do not skip it even if the developer's description was detailed.
+### 4.1 — Derive a name and create the change
 
-### Step 2.1 — Locate relevant code
-
-Based on the confirmed intent, identify and read the parts of the codebase most relevant to this change:
-
-- Entry points, interfaces, or public APIs that will be touched
-- Existing implementations of similar patterns
-- Data models, schemas, or types involved
-- Tests that cover the area being changed
-- Configuration or environment files that affect this area
-
-Use search tools to find files by keyword or path pattern. Read the files, don't just list them.
-
-### Step 2.2 — Scan for relevant archived changes
-
-\`\`\`bash
-ls openspec/changes/archive/
-\`\`\`
-
-Read the \`proposal.md\` of any archived change whose name or scope overlaps with the confirmed intent. "Overlaps" means: touches the same subsystem, solves a related problem, or was explicitly mentioned by the developer.
-
-If relevant archived changes exist, summarise what they did and note them as prior art. They become input to the artifacts — not to copy, but to avoid reinventing or contradicting.
-
-If no archived changes are relevant, move on silently.
-
-### Step 2.3 — Surface what you found
-
-Before creating any artifact, tell the developer what you found in a brief summary:
-
-\`\`\`
-**Codebase context:**
-- <key file or pattern you found and why it matters>
-- <another finding>
-
-**Prior art:** <archived change names, or "None relevant">
-
-Does any of this change what you want?
-\`\`\`
-
-If something you found contradicts or complicates the confirmed intent, surface it here and re-confirm before proceeding.
-
----
-
-## Phase 3: Artifact Creation
-
-Once intent is confirmed and the codebase investigation is complete, create the change and its artifacts.
-
-### Step 3.1 — Derive a name and create the change
-
-From the confirmed intent, derive a kebab-case name (e.g., "add retry logic to payment processor" → \`add-payment-retry-logic\`).
+From the confirmed summary, derive a kebab-case change name (e.g. "add expiry date to subscription" → \`add-subscription-expiry\`).
 
 \`\`\`bash
 openspec new change "<name>"
 \`\`\`
 
-### Step 3.2 — Get the artifact build order
+### 4.2 — Get the artifact build order
 
 \`\`\`bash
 openspec status --change "<name>" --json
@@ -159,7 +140,7 @@ Parse the JSON to get:
 - \`artifacts\`: all artifacts with status and dependencies
 - \`planningHome\`, \`changeRoot\`, \`artifactPaths\`, \`actionContext\`: path context — use these, do not assume repo-local paths
 
-### Step 3.3 — Create artifacts in dependency order
+### 4.3 — Create artifacts in dependency order
 
 Use the **TodoWrite tool** to track progress.
 
@@ -173,17 +154,18 @@ For each artifact that is \`ready\` (dependencies satisfied):
 
 2. Read any completed dependency artifacts for context.
 
-3. Write the artifact to \`resolvedOutputPath\`, using \`template\` as structure. Incorporate:
-   - The confirmed intent from Phase 1
-   - The codebase findings from Phase 2
-   - Any relevant prior art from archived changes
-   - \`context\` and \`rules\` as constraints for you — **never copy them into the file**
+3. Write the artifact to \`resolvedOutputPath\`, using \`template\` as structure. Feed in:
+   - Everything established in the interview (Phase 2)
+   - The confirmed summary (Phase 3)
+   - Codebase findings from Phase 1 and any code read during the interview
+   - Relevant prior art from archived changes
+   - \`context\` and \`rules\` as constraints — **never copy them into the file**
 
 4. Show progress: "Created \`<artifact-id>\`"
 
 Re-run \`openspec status --change "<name>" --json\` after each artifact. Stop when all \`applyRequires\` artifacts have \`status: "done"\`.
 
-### Step 3.4 — Show final status
+### 4.4 — Show final status
 
 \`\`\`bash
 openspec status --change "<name>"
@@ -198,14 +180,20 @@ Summarise:
 
 ## Guardrails
 
-- **Never skip the interview.** Even a fully-specified input contains assumptions. Run at least one hypothesis + confirmation cycle.
-- **Never skip the codebase investigation.** Reading code before writing specs is what makes the artifacts accurate.
-- **No fast path.** Do not proceed to artifact creation until you have an explicit confirmation of intent.
-- **One question at a time.** Never batch questions.
-- **Every question needs a guess.** A question without your hypothesis attached is a survey, not an interview.
-- **Three or more rounds without confidence rising** means you're asking the wrong questions — step back and reframe.
+- **No fast path.** Do not proceed to artifact creation until you have an explicit confirmation of the Phase 3 summary.
+- **Never skip the codebase read.** Code you haven't read is an assumption you're making. Assumptions become bugs.
+- **One question at a time.** Never batch.
+- **Every question needs a guess.** A question without your hypothesis is a survey, not an interview.
+- **Complex answers should open new questions**, not be accepted and moved past.
+- **Code reading is part of the interview**, not a separate phase — if an answer points somewhere you haven't read, go read it now.
 - If a change with that name already exists, ask if the developer wants to continue it or create a new one.
-- Verify each artifact file exists after writing before proceeding to the next.`,
+- Verify each artifact file exists after writing before proceeding to the next.`;
+
+export function getOpsxProposeSkillTemplate(): SkillTemplate {
+  return {
+    name: 'openspec-propose',
+    description: 'Propose a new change. Interviews the developer and investigates the codebase — one question at a time, branching on answers — until every ambiguity is resolved. Only then writes the artifacts. Use when a developer wants to turn a rough idea or ticket into a fully specified change.',
+    instructions: INSTRUCTIONS,
     license: 'MIT',
     compatibility: 'Requires openspec CLI.',
     metadata: { author: 'openspec', version: '1.0' },
@@ -215,204 +203,9 @@ Summarise:
 export function getOpsxProposeCommandTemplate(): CommandTemplate {
   return {
     name: 'OPSX: Propose',
-    description: 'Propose a new change — interview the developer and investigate the codebase before writing any artifacts',
+    description: 'Propose a new change — interview the developer and investigate the codebase until every ambiguity is resolved, then write the artifacts',
     category: 'Workflow',
     tags: ['workflow', 'artifacts', 'experimental'],
-    content: `Propose a new change. Before writing any artifact, interview the developer and investigate the codebase until you have enough context to write something worth reading.
-
-The output is a change directory with all artifacts ready for implementation. The path to get there runs through a focused interview, a codebase investigation, and a scan for relevant prior art — in that order.
-
----
-
-## Phase 1: Interview
-
-**Goal:** Reach ~80% confidence about what the developer actually wants, expressed in their own words.
-
-### Step 1.1 — Get the initial input
-
-If the developer has provided a description (as an argument to /opsx:propose), use it. If not, ask one open question:
-
-> "What do you want to build or change? Give me as much or as little as you have."
-
-There is no minimum bar for the initial input. A one-liner is fine — the interview fills the gap.
-
-### Step 1.2 — State a hypothesis
-
-Before asking anything, write your current best read of what the developer wants:
-
-\`\`\`
-HYPOTHESIS: <one sentence — what you think they actually want, not just what they said>
-CONFIDENCE: ~<N>% — missing: <what's still unresolved>
-\`\`\`
-
-Be honest about the number. If you can't predict their reaction to the next three questions you'd ask, the number is wrong. Always include a reason when confidence is below ~80%.
-
-### Step 1.3 — Ask one question at a time, each with a guess
-
-Format every question as:
-
-\`\`\`
-Q: <one focused question>
-GUESS: <your hypothesis for the answer, and the reasoning behind it>
-\`\`\`
-
-Wait for the answer before asking the next question. Do not batch questions.
-
-**What to probe for** (not necessarily in this order — follow the conversation):
-- **Who** uses or is affected by this change
-- **Why now** — what changed or what is currently painful
-- **Success** — how they'd know it worked, with a number or observable outcome if possible
-- **Constraint** — the binding limit (time, scope, backwards compatibility, performance target)
-- **Out of scope** — what explicitly is not part of this change
-
-When the developer gives convention-signaling answers ("scalable", "clean", "the usual way"), ask:
-> "If you didn't have to justify this to anyone, what would you actually want?"
-
-### Step 1.4 — Confirm intent
-
-When confidence reaches ~80%, write back a tight restate:
-
-\`\`\`
-Here's what I now understand:
-
-- Outcome:      <one line>
-- Who:          <one line — who benefits or is affected>
-- Why now:      <one line — what changed or what's painful>
-- Success:      <one line — how we know it worked>
-- Constraint:   <one line — the binding limit>
-- Out of scope: <one line — what we're explicitly not doing>
-
-Anything wrong or missing?
-\`\`\`
-
-The "Out of scope" line is not optional. Silent disagreement about non-goals is half of all misalignment.
-
-The gate is an explicit confirmation. The following are **not** confirmation:
-- "Whatever you think is best" → ask with two concrete options as a choice
-- "Sounds good" → ask "Anything you'd refine?"
-- Silence followed by "let's go" → ask "Did I miss anything?"
-
-Fold corrections in and restate until you get an explicit yes.
-
----
-
-## Phase 2: Codebase Investigation
-
-**Goal:** Understand the existing system well enough that the artifacts reflect reality, not assumptions.
-
-Run this phase after intent is confirmed, before writing any artifact. Do not skip it even if the developer's description was detailed.
-
-### Step 2.1 — Locate relevant code
-
-Based on the confirmed intent, identify and read the parts of the codebase most relevant to this change:
-
-- Entry points, interfaces, or public APIs that will be touched
-- Existing implementations of similar patterns
-- Data models, schemas, or types involved
-- Tests that cover the area being changed
-- Configuration or environment files that affect this area
-
-Use search tools to find files by keyword or path pattern. Read the files, don't just list them.
-
-### Step 2.2 — Scan for relevant archived changes
-
-\`\`\`bash
-ls openspec/changes/archive/
-\`\`\`
-
-Read the \`proposal.md\` of any archived change whose name or scope overlaps with the confirmed intent. "Overlaps" means: touches the same subsystem, solves a related problem, or was explicitly mentioned by the developer.
-
-If relevant archived changes exist, summarise what they did and note them as prior art. They become input to the artifacts — not to copy, but to avoid reinventing or contradicting.
-
-If no archived changes are relevant, move on silently.
-
-### Step 2.3 — Surface what you found
-
-Before creating any artifact, tell the developer what you found in a brief summary:
-
-\`\`\`
-**Codebase context:**
-- <key file or pattern you found and why it matters>
-- <another finding>
-
-**Prior art:** <archived change names, or "None relevant">
-
-Does any of this change what you want?
-\`\`\`
-
-If something you found contradicts or complicates the confirmed intent, surface it here and re-confirm before proceeding.
-
----
-
-## Phase 3: Artifact Creation
-
-Once intent is confirmed and the codebase investigation is complete, create the change and its artifacts.
-
-### Step 3.1 — Derive a name and create the change
-
-From the confirmed intent, derive a kebab-case name (e.g., "add retry logic to payment processor" → \`add-payment-retry-logic\`).
-
-\`\`\`bash
-openspec new change "<name>"
-\`\`\`
-
-### Step 3.2 — Get the artifact build order
-
-\`\`\`bash
-openspec status --change "<name>" --json
-\`\`\`
-
-Parse the JSON to get:
-- \`applyRequires\`: artifact IDs needed before implementation
-- \`artifacts\`: all artifacts with status and dependencies
-- \`planningHome\`, \`changeRoot\`, \`artifactPaths\`, \`actionContext\`: path context — use these, do not assume repo-local paths
-
-### Step 3.3 — Create artifacts in dependency order
-
-Use the **TodoWrite tool** to track progress.
-
-For each artifact that is \`ready\` (dependencies satisfied):
-
-1. Get instructions:
-   \`\`\`bash
-   openspec instructions <artifact-id> --change "<name>" --json
-   \`\`\`
-   The JSON includes \`context\`, \`rules\`, \`template\`, \`instruction\`, \`resolvedOutputPath\`, \`dependencies\`.
-
-2. Read any completed dependency artifacts for context.
-
-3. Write the artifact to \`resolvedOutputPath\`, using \`template\` as structure. Incorporate:
-   - The confirmed intent from Phase 1
-   - The codebase findings from Phase 2
-   - Any relevant prior art from archived changes
-   - \`context\` and \`rules\` as constraints for you — **never copy them into the file**
-
-4. Show progress: "Created \`<artifact-id>\`"
-
-Re-run \`openspec status --change "<name>" --json\` after each artifact. Stop when all \`applyRequires\` artifacts have \`status: "done"\`.
-
-### Step 3.4 — Show final status
-
-\`\`\`bash
-openspec status --change "<name>"
-\`\`\`
-
-Summarise:
-- Change name and location
-- Artifacts created with one-line descriptions
-- "Ready for implementation. Run \`/opsx:apply\` when you're ready."
-
----
-
-## Guardrails
-
-- **Never skip the interview.** Even a fully-specified input contains assumptions. Run at least one hypothesis + confirmation cycle.
-- **Never skip the codebase investigation.** Reading code before writing specs is what makes the artifacts accurate.
-- **No fast path.** Do not proceed to artifact creation until you have an explicit confirmation of intent.
-- **One question at a time.** Never batch questions.
-- **Every question needs a guess.** A question without your hypothesis attached is a survey, not an interview.
-- **Three or more rounds without confidence rising** means you're asking the wrong questions — step back and reframe.
-- If a change with that name already exists, ask if the developer wants to continue it or create a new one.
-- Verify each artifact file exists after writing before proceeding to the next.`
+    content: INSTRUCTIONS,
   };
 }
