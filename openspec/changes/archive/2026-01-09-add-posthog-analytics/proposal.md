@@ -1,3 +1,9 @@
+> ⚠️ **Superseded by [`2026-06-15-remove-telemetry-and-feedback`](../../2026-06-15-remove-telemetry-and-feedback/proposal.md)** (archived 2026-06-15)
+>
+> The PostHog integration, anonymous ID generation, opt-out mechanism, and first-run notice introduced here are all removed by that change.
+
+---
+
 ## Why
 
 OpenSpec currently has no visibility into how the tool is being used. Without analytics, we cannot:

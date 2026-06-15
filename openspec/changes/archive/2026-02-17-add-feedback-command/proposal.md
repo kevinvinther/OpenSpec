@@ -1,3 +1,9 @@
+> ⚠️ **Superseded by [`2026-06-15-remove-telemetry-and-feedback`](../../2026-06-15-remove-telemetry-and-feedback/proposal.md)** (archived 2026-06-15)
+>
+> The `feedback` command and its `gh`-based issue submission introduced here are fully removed by that change.
+
+---
+
 ## Why
 
 Users and agents need a simple way to submit feedback about OpenSpec directly from the CLI. Currently there's no mechanism to collect user feedback, feature requests, or bug reports in a way that enables follow-up conversation. Using GitHub Issues allows us to track feedback, prevent spam via GitHub auth, and enables outreach to users.
