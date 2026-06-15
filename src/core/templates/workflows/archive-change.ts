@@ -86,13 +86,33 @@ export function getArchiveChangeSkillTemplate(): SkillTemplate {
    mv "<changeRoot>" "<planningHome.changesDir>/archive/YYYY-MM-DD-<name>"
    \`\`\`
 
-6. **Display summary**
+6. **Mark superseded archived changes**
+
+   Read the newly archived \`proposal.md\`. Find the \`## Supersedes\` section (written by \`/opsx:propose\`). If the section is absent or contains only "None.", skip this step.
+
+   For each bullet entry in the section, extract the archive directory name (the bold text before the colon) and the description of what was superseded (the text after the colon). Find that archived change's \`proposal.md\` and prepend the following notice at the very top of the file, before any existing content. If the file already has one or more superseded-by notices at the top (i.e. it was previously superseded), prepend the new notice above the existing ones — a change may be superseded multiple times, and all notices should be visible.
+
+   \`\`\`markdown
+   > ⚠️ **Superseded by [\`<new-change-name>\`](../../<YYYY-MM-DD-new-change-name>/proposal.md)** (archived <YYYY-MM-DD>)
+   >
+   > <The description from the Supersedes entry, e.g. "The retry mechanism described here was replaced with a circuit-breaker approach.">
+
+   ---
+
+   \`\`\`
+
+   Use a relative path for the link so it resolves correctly from within the archive directory structure.
+
+   If a superseded change cannot be found in the archive, log a warning but do not fail the archive.
+
+7. **Display summary**
 
    Show archive completion summary including:
    - Change name
    - Schema that was used
    - Archive location
    - Whether specs were synced (if applicable)
+   - Which prior changes were marked as superseded (if any)
    - Note about any warnings (incomplete artifacts/tasks)
 
 **Output On Success**
@@ -104,6 +124,7 @@ export function getArchiveChangeSkillTemplate(): SkillTemplate {
 **Schema:** <schema-name>
 **Archived to:** the archive path derived from \`planningHome.changesDir\`/YYYY-MM-DD-<name>/
 **Specs:** ✓ Synced to main specs (or "No delta specs" or "Sync skipped")
+**Superseded:** <list of prior change names marked as superseded, or "None">
 
 All artifacts complete. All tasks complete.
 \`\`\`
@@ -115,7 +136,8 @@ All artifacts complete. All tasks complete.
 - Preserve .openspec.yaml when moving to archive (it moves with the directory)
 - Show clear summary of what happened
 - If sync is requested, use openspec-sync-specs approach (agent-driven)
-- If delta specs exist, always run the sync assessment and show the combined summary before prompting`,
+- If delta specs exist, always run the sync assessment and show the combined summary before prompting
+- When marking superseded changes, write a specific description of *what* was superseded — not just a link`,
     license: 'MIT',
     compatibility: 'Requires openspec CLI.',
     metadata: { author: 'openspec', version: '1.0' },
@@ -204,13 +226,33 @@ export function getOpsxArchiveCommandTemplate(): CommandTemplate {
    mv "<changeRoot>" "<planningHome.changesDir>/archive/YYYY-MM-DD-<name>"
    \`\`\`
 
-6. **Display summary**
+6. **Mark superseded archived changes**
+
+   Read the newly archived \`proposal.md\`. Find the \`## Supersedes\` section (written by \`/opsx:propose\`). If the section is absent or contains only "None.", skip this step.
+
+   For each bullet entry in the section, extract the archive directory name (the bold text before the colon) and the description of what was superseded (the text after the colon). Find that archived change's \`proposal.md\` and prepend the following notice at the very top of the file, before any existing content. If the file already has one or more superseded-by notices at the top (i.e. it was previously superseded), prepend the new notice above the existing ones — a change may be superseded multiple times, and all notices should be visible.
+
+   \`\`\`markdown
+   > ⚠️ **Superseded by [\`<new-change-name>\`](../../<YYYY-MM-DD-new-change-name>/proposal.md)** (archived <YYYY-MM-DD>)
+   >
+   > <The description from the Supersedes entry, e.g. "The retry mechanism described here was replaced with a circuit-breaker approach.">
+
+   ---
+
+   \`\`\`
+
+   Use a relative path for the link so it resolves correctly from within the archive directory structure.
+
+   If a superseded change cannot be found in the archive, log a warning but do not fail the archive.
+
+7. **Display summary**
 
    Show archive completion summary including:
    - Change name
    - Schema that was used
    - Archive location
    - Spec sync status (synced / sync skipped / no delta specs)
+   - Which prior changes were marked as superseded (if any)
    - Note about any warnings (incomplete artifacts/tasks)
 
 **Output On Success**
@@ -222,6 +264,7 @@ export function getOpsxArchiveCommandTemplate(): CommandTemplate {
 **Schema:** <schema-name>
 **Archived to:** the archive path derived from \`planningHome.changesDir\`/YYYY-MM-DD-<name>/
 **Specs:** ✓ Synced to main specs
+**Superseded:** <list of prior change names marked as superseded, or "None">
 
 All artifacts complete. All tasks complete.
 \`\`\`
@@ -235,6 +278,7 @@ All artifacts complete. All tasks complete.
 **Schema:** <schema-name>
 **Archived to:** the archive path derived from \`planningHome.changesDir\`/YYYY-MM-DD-<name>/
 **Specs:** No delta specs
+**Superseded:** <list of prior change names marked as superseded, or "None">
 
 All artifacts complete. All tasks complete.
 \`\`\`
@@ -248,6 +292,7 @@ All artifacts complete. All tasks complete.
 **Schema:** <schema-name>
 **Archived to:** the archive path derived from \`planningHome.changesDir\`/YYYY-MM-DD-<name>/
 **Specs:** Sync skipped (user chose to skip)
+**Superseded:** <list of prior change names marked as superseded, or "None">
 
 **Warnings:**
 - Archived with 2 incomplete artifacts
@@ -280,6 +325,7 @@ Target archive directory already exists.
 - Preserve .openspec.yaml when moving to archive (it moves with the directory)
 - Show clear summary of what happened
 - If sync is requested, use the Skill tool to invoke \`openspec-sync-specs\` (agent-driven)
-- If delta specs exist, always run the sync assessment and show the combined summary before prompting`
+- If delta specs exist, always run the sync assessment and show the combined summary before prompting
+- When marking superseded changes, write a specific description of *what* was superseded — not just a link`
   };
 }

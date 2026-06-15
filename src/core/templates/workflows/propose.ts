@@ -39,6 +39,8 @@ ls openspec/changes/archive/
 \`\`\`
 Read the \`proposal.md\` of any archived change that touches the same subsystem or solves a related problem.
 
+As you read, identify which archived changes this new change might **supersede** — wholly or partly. A change is superseded if this new work replaces its behaviour, makes its approach obsolete, or extends the same area in a way that overrides prior decisions. Keep this list — it will be written into the proposal artifact.
+
 The goal of this reading is to understand the context well enough to ask *relevant* questions — not a generic checklist, but questions grounded in what this codebase actually looks like. Questions that code reading can already answer should not be asked.
 
 ### 1.3 — Build the initial open-questions set
@@ -103,6 +105,7 @@ Data:        <schema/model changes and migration approach>
 Interface:   <what changes for callers, if anything>
 Logic:       <validation rules, side effects, business rules>
 Permissions: <auth or visibility changes, if any>
+Supersedes:  <archived changes this wholly or partly replaces, or "None">
 Out of scope: <what we are explicitly not doing>
 
 Anything wrong or missing?
@@ -160,6 +163,27 @@ For each artifact that is \`ready\` (dependencies satisfied):
    - Codebase findings from Phase 1 and any code read during the interview
    - Relevant prior art from archived changes
    - \`context\` and \`rules\` as constraints — **never copy them into the file**
+
+   **For \`proposal.md\` specifically:** include a \`## Supersedes\` section near the top of the file. If this change supersedes prior archived changes, list each one with the archive directory name and a one-sentence description of what was replaced. If none, include the section with "None." so it is always present and parseable.
+
+   Example:
+
+   \`\`\`markdown
+   ## Supersedes
+
+   - **2024-03-01-old-retry-logic**: The retry mechanism described there (exponential back-off with fixed cap) was replaced by the circuit-breaker approach in this change.
+   - **2023-11-20-auth-v1**: Wholly superseded — this change extends the same auth surface with token rotation, making the prior design obsolete.
+   \`\`\`
+
+   Or when nothing is superseded:
+
+   \`\`\`markdown
+   ## Supersedes
+
+   None.
+   \`\`\`
+
+   This section is read by \`/opsx:archive\` to mark superseded changes — it must be present.
 
 4. Show progress: "Created \`<artifact-id>\`"
 

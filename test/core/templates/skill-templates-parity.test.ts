@@ -42,16 +42,16 @@ const EXPECTED_FUNCTION_HASHES: Record<string, string> = {
   getOpsxContinueCommandTemplate: '62f8863edda2bfe4e210f8bc3095fd4369aaaaf7772a5cba9602d0f0bca1d0c9',
   getOpsxApplyCommandTemplate: '812feefd32a4d9d468e03e456d06e3d2d08d1118d29cce4911f0be59cdd30bfc',
   getOpsxFfCommandTemplate: 'f775b242bcfd56594c431c7f31a0129208a1bacfdb2427074d412543072ef7ca',
-  getArchiveChangeSkillTemplate: 'bdf022ae2cdef1feef4d641a068bef3a7fc5d98a323f7ce9f77ac578fe8d20c6',
+  getArchiveChangeSkillTemplate: '3c9f28eb1938c571adc5c80ab950a77c790a7e54fc7c061efcd83acdc7adfa31',
   getBulkArchiveChangeSkillTemplate: 'fdb1715804e86de85be96222b8efeb9d5b350c6d5c19e343e244655deff8e62b',
   getOpsxSyncCommandTemplate: '4c8118afaea79ff4fed3d946c88e6a7abbba904a5fbf643e4372da1e3735a467',
   getVerifyChangeSkillTemplate: '3c5dda8b49ba00f50b5bae7f04763dd00cc00a05e5f1d8a2068ad7fb701d8165',
-  getOpsxArchiveCommandTemplate: '5181ec2f59c9f0f3376e61d952ed4be976cbd01595b6b0d5e67466c8bd6bac6d',
+  getOpsxArchiveCommandTemplate: '95157e07cf25969fb96f6634795ddf93acc484bf6f8f0f94df19394118807602',
   getOpsxOnboardCommandTemplate: 'f995a69630267e6be5c25e27567d89eb9c5640e9afbf0dc40cab3799b1785362',
   getOpsxBulkArchiveCommandTemplate: 'b76c421023ccb5a12867c349f27cdb186234b692c1811980fb94127567bdabda',
   getOpsxVerifyCommandTemplate: '9a7a3f9e5bc3d0c0878b1a4493efbbb38729597d9b9be78f63284cc2da7c20c3',
-  getOpsxProposeSkillTemplate: '036676a8d06825fbfa157ec402e92f355d2060c98ca50c196c472c4f46a6260e',
-  getOpsxProposeCommandTemplate: 'f11ae696e49de5a467e3aa6d979f0b9e37283c2bc1e4832d4064cbc8703b32a4',
+  getOpsxProposeSkillTemplate: '342b0ff6abebbab3651a802c91d63bd3545b55f47ea4f194fe5f41417f67f40e',
+  getOpsxProposeCommandTemplate: '7f7d085983d3baa3ac914998a2e2fa0ddc7d92040326d99a6c12758a0da68df1',
   getFeedbackSkillTemplate: 'd7d83c5f7fc2b92fe8f4588a5bf2d9cb315e4c73ec19bcd5ef28270906319a0d',
 };
 
@@ -62,11 +62,11 @@ const EXPECTED_GENERATED_SKILL_CONTENT_HASHES: Record<string, string> = {
   'openspec-apply-change': 'd849442efd925b9247651e254a5cd696945321610cca5a9432ad420430554548',
   'openspec-ff-change': '9d9b1995b6f4adb3da570676f7d11fee4cd1cf6c5df8ec83c033e02783a544df',
   'openspec-sync-specs': '2e0f67ec6fadffc6107b4b1a28eef23a99a6649e5fae706897ea1dd9deb852a8',
-  'openspec-archive-change': '8d14af2c8b2e4358308ac9fc14f75db42a4b41a07e175825035852a82479793e',
+  'openspec-archive-change': 'f648da2dcf3081321cf79a9e3f557f2e3687eeac163fb2230d51d2fe84461081',
   'openspec-bulk-archive-change': '16207683996b1952559cd4e33463f28fb097761f2c5d912107733d01a90d3f2f',
   'openspec-verify-change': 'a2acecd0c2b4e57080a314e5e7a093e0688293c37e446eb45d378f5050058550',
   'openspec-onboard': 'd02bb6982a91e082caf234e377387afd21a2954b3a667bd1f65f68a83712698d',
-  'openspec-propose': '582a33d951d21a908fb38370cdcf07fe2af8599faa876ddd4704e1b9bd990b29',
+  'openspec-propose': 'ae27c5d53591d9ed7c5cd4904a18a1d2661b8ffd999e17799d13d4ce8307157e',
 };
 
 function stableStringify(value: unknown): string {
