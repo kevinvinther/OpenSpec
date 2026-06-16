@@ -1,3 +1,9 @@
+> ⚠️ NOTE FOR THIS BRANCH
+
+You can benefit from reading `GUIDE.md` to see install and usage guide, and how this branch differs.
+
+---
+
 <p align="center">
   <a href="https://github.com/Fission-AI/OpenSpec">
     <picture>
@@ -33,8 +39,7 @@ Our philosophy:
 → scalable from personal projects to enterprises
 ```
 
-> [!TIP]
-> **New workflow now available!** We've rebuilt OpenSpec with a new artifact-guided workflow.
+> [!TIP] > **New workflow now available!** We've rebuilt OpenSpec with a new artifact-guided workflow.
 >
 > Run `/opsx:propose "your idea"` to get started. → [Learn more here](docs/opsx.md)
 
@@ -115,13 +120,11 @@ If you want the expanded workflow (`/opsx:new`, `/opsx:continue`, `/opsx:ff`, `/
 → **[Customization](docs/customization.md)**: make it yours<br>
 → **[Organizing Specs](docs/organizing-specs.md)**: flat vs hierarchical structures
 
-
 ## Community schemas
 
 Third-party schema bundles distributed via standalone repositories — these provide opinionated workflows that integrate OpenSpec with other tools, similar to how [github/spec-kit's community extension catalog](https://github.com/github/spec-kit/tree/main/extensions) handles tool integrations.
 
 → **[Browse the catalog](docs/customization.md#community-schemas)** in the customization docs.
-
 
 ## Why OpenSpec?
 
@@ -199,8 +202,6 @@ We collect only command names and version to understand usage patterns. No argum
 See [MAINTAINERS.md](MAINTAINERS.md) for the list of core maintainers and advisors who help guide the project.
 
 </details>
-
-
 
 ## License
 

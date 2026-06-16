@@ -41,12 +41,71 @@ Follow the prompts to select your AI tool (Claude Code, Cursor, Windsurf, etc.).
 /opsx:propose  →  /opsx:apply  →  /opsx:sync  →  /opsx:archive
 ```
 
-| Command | What it does |
-|---|---|
+| Command         | What it does                                                  |
+| --------------- | ------------------------------------------------------------- |
 | `/opsx:propose` | Interviews you, reads the codebase, then writes the artifacts |
-| `/opsx:apply` | Implements the tasks from `tasks.md` |
-| `/opsx:sync` | Merges delta specs back into the main `specs/` |
-| `/opsx:archive` | Archives the completed change |
+| `/opsx:apply`   | Implements the tasks from `tasks.md`                          |
+| `/opsx:sync`    | Merges delta specs back into the main `specs/`                |
+| `/opsx:archive` | Archives the completed change                                 |
+
+---
+
+## Artifact Handoff
+
+If you wish to continue the work of a refined artifact, use the script in `scripts/new-change-from-artifact.sh`.
+
+**Usage**:
+In the root level of the repository folder in which you want to create the OpenSpec change:
+
+1. Create a folder containing the artifact: `descriptive-name/propose.md`, `descriptive-name/tasks.md`, etc.
+
+```
+❯ tree descriptive-name
+descriptive-name
+├── design.md
+├── proposal.md
+├── specs
+│   └── descriptive-spec
+│   └── spec.md
+└── tasks.md
+
+3 directories, 4 files
+```
+
+1. Run the script with the folder as argument: `$ScriptLocation/new-change-from-artifact.sh descriptive-name`
+
+```
+❯ ~/Projects/OpenSpec/scripts/new-change-from-artifact.sh descriptive-name
+==> Creating change 'descriptive-name'...
+Created change 'descriptive-name' at openspec/changes/descriptive-name/
+Schema: spec-driven
+==> Copying files from /Users/user/Projects/project-name/descriptive-name...
+
+==> Status...
+Change: descriptive-name
+Schema: spec-driven
+Planning home: repo
+Change root: /Users/user/Projects/project-name/openspec/changes/descriptive-name
+Progress: 3/4 artifacts complete
+
+[x] proposal
+[x] design
+[ ] specs
+[x] tasks
+
+==> Validating...
+Change 'descriptive-name' has issues
+✗ [ERROR] file: Change must have at least one delta. No deltas found. Ensure your change has a specs/ directory with capability folders (e.g. specs/http-server/spec.md) containing .md files that use delta headers (## ADDED/MODIFIED/REMOVED/RENAMED Requirements) and that each requirement includes at least one "#### Scenario:" block. Tip: run "openspec change show <change-id> --json --deltas-only" to inspect parsed deltas.
+Next steps:
+
+- Ensure change has deltas in specs/: use headers ## ADDED/MODIFIED/REMOVED/RENAMED Requirements
+- Each requirement MUST include at least one #### Scenario: block
+- Debug parsed deltas: openspec change show <id> --json --deltas-only
+```
+
+1. Profit!
+
+As you can see, this will also validate the spec.
 
 ---
 
@@ -55,6 +114,7 @@ Follow the prompts to select your AI tool (Claude Code, Cursor, Windsurf, etc.).
 Specs can be organised in nested directories to reflect your domain structure. OpenSpec auto-detects whether a project is using flat or hierarchical layout.
 
 **Flat** (default for small projects):
+
 ```
 openspec/specs/
   auth/spec.md
@@ -63,6 +123,7 @@ openspec/specs/
 ```
 
 **Hierarchical** (for larger codebases):
+
 ```
 openspec/specs/
   platform/
@@ -90,10 +151,10 @@ Control the behaviour in `openspec/config.yaml` (or via `openspec config`):
 
 ```yaml
 specStructure:
-  structure: auto        # auto | flat | hierarchical
-  maxDepth: 4            # maximum nesting depth (default: 4)
-  allowMixed: true       # allow mixing flat and hierarchical
-  validatePaths: true    # enforce naming conventions
+  structure: auto # auto | flat | hierarchical
+  maxDepth: 4 # maximum nesting depth (default: 4)
+  allowMixed: true # allow mixing flat and hierarchical
+  validatePaths: true # enforce naming conventions
 ```
 
 `auto` (the default) detects the structure from what already exists in `specs/`. Set it explicitly if you want to enforce one style.
